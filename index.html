@@ -65,7 +65,7 @@ base classes within the scope of class.</p>
     }
 };</pre>
 
-<p>The only difference is that in the proposed syntax, the name <code>C</code>
+<p>The only difference is that in the proposed syntax, the name <code>B</code>
 is specified sooner and thus could be used in the second
 <span class="syntax">base-specifier</span>.
 
@@ -76,7 +76,7 @@ due to class name injection, but there are a few cases where this does not work
 and if the base class is a template, requires either repeating template
 parameters or a work-around.</p>
 
-<h4>Dependant type names</h4>
+<h4>Dependent type names</h4>
 
 <p>e.g.:</p>
 
@@ -92,12 +92,12 @@ template&lt;typename T,typename Pasta&gt; class monstrous :
 };
 </pre>
 
-<p>A very long instantiation such as this particularily undesirable to have to
+<p>A very long instantiation such as this is particularly undesirable to have to
 repeat.  The injected name <code>something</code> cannot be used because the
-definition of its class is not avaible before <code>monstrous</code> is
+definition of its class is not available before <code>monstrous</code> is
 defined.</p>
 
-<h4>Variable types</h4>
+<h4>Unknown class names</h4>
 
 <p>e.g.:</p>
 
@@ -117,24 +117,24 @@ since that is not its name. Looking at the definition of
 <code>particular_t</code> it looks like <code>type</code> is its name, but that
 might not be so. <code>type</code> might actually be a
 <span class="literal">typedef</span> to another name, and in fact, the actual
-name of the class may vary depending on the template paramater.</p>
+name of the class may vary depending on the template parameter.</p>
 
-<h4>Multiple inheritence with the same base class name</h4>
+<h4>Ambiguous names</h4>
 
 <pre>
-class A : public B&lt;Hit,Me&gt;::type, public C&lt;I,Dare,Ya&gt;::type {
+class A : public B&lt;X&gt;, public B&lt;Y&gt; {
     /* ... */
 };
 </pre>
 
-<p>Here the name <code>type</code> is ambiguous.</p>
+<p>Here the name <code>B</code> is ambiguous.</p>
 
 <h3>Alternatives</h3>
 
 <p>The first example can be solved like so:</p>
 <pre>
 template&lt;typename T,typename Pasta&gt; class monstrous : public something&lt;/* ... */&gt; {
-    typedef typename monstrous::something;
+    typedef typename monstrous::something base_t;
     /* ... */
 };
 </pre>
@@ -143,7 +143,7 @@ template&lt;typename T,typename Pasta&gt; class monstrous : public something&lt;
 <p>A particular template instantiation may be declared in a typedef before being
 used in a derived class. Disadvantages: this pollutes the namespace with extra
 names, and doesn't work in the first case. In the first case, one could forward
-declare <code>monstrous</code> and delcare a template alias with the same
+declare <code>monstrous</code> and declare a template alias with the same
 parameters, but this would only exchange duplicating the base class' arguments
 with duplicating the parameters of the derived class.</p>
 
