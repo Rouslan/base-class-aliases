@@ -1,0 +1,214 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>A Proposal to Add Base Class Aliases to the Language</title>
+<style type="text/css">
+#paper_details { float: right; }
+#paper_details td { padding-left: 1em; }
+h1 { clear: both; text-align: center; padding-top: 1em; }
+.grammar, .syntax { font-style: italic; }
+.grammar { margin-bottom: 2em; }
+.grammar .definition { margin-top: 1em; }
+.rule { padding-left: 3em; }
+.literal, pre, code { font-style: normal; font-family: monospace; }
+</style>
+</head>
+<body>
+<table id="paper_details">
+<tr><td>Document number:</td><td><em>not submitted</em></td></tr>
+<tr><td>Date:</td><td>2014-03-27</td></tr>
+<tr><td>Project:</td><td>JTC1.22.32 Programming Language C++</td></tr>
+<tr><td>Reply-to:</td><td>Rouslan Korneychuk &lt;rouslank at msn dot com&gt;</td></tr>
+</table>
+
+<h1>A Proposal to Add Base Class Aliases to the Language</h1>
+
+<h2>I. Table of Contents</h2>
+
+<ul>
+<li><a href="#introduction">II. Introduction</a></li>
+<li><a href="#motivation">III. Motivation</a></li>
+<li><a href="#impact">IV. Impact On the Standard</a></li>
+<li><a href="#design">V. Design Decisions</a></li>
+<li><a href="#specification">VI. Technical Specifications</a></li>
+<!-- <li><a href="#acknowledge">VII. Acknowledgements</a></li> -->
+<li><a href="#references">VII. References</a></li>
+</ul>
+
+<h2 id="introduction">II. Introduction</h2>
+
+<p>This proposal suggest adding a short-hand notation for creating aliases to
+base classes within the scope of class.</p>
+
+<p>e.g.:</p>
+
+<pre>class A : public <strong>B = C</strong>, public D {
+    A() : B(3) {}
+
+    void do_something() {
+        /* ... */
+        B::do_something();
+    }
+};</pre>
+
+<p>which would be approximately equivalent to:</p>
+
+<pre>class A : public C, public D {
+    <strong>typedef C B;</strong>
+
+    A() : B(3) {}
+
+    void do_something() {
+        /* ... */
+        B::do_something();
+    }
+};</pre>
+
+<p>The only difference is that in the proposed syntax, the name <code>C</code>
+is specified sooner and thus could be used in the second
+<span class="syntax">base-specifier</span>.
+
+<h2 id="motivation">III. Motivation</h2>
+
+<p>Most of the time, a class' base class can be easily referred to by its name
+due to class name injection, but there are a few cases where this does not work
+and if the base class is a template, requires either repeating template
+parameters or a work-around.</p>
+
+<h4>Dependant type names</h4>
+
+<p>e.g.:</p>
+
+<pre>
+template&lt;typename T,typename Pasta&gt; class monstrous :
+    public something&lt;
+        monstrous&lt;T,Pasta&gt;,
+        allocator&lt;monstrous&lt;T,Pasta&gt;&gt;,
+        comparison&lt;monstrous&lt;T,Pasta&gt;,
+        and_so_on&lt;Pasta&gt;,
+        and_so_forth&lt;T,etc&lt;T&gt;&gt;&gt; {
+    /* ... */
+};
+</pre>
+
+<p>A very long instantiation such as this particularily undesirable to have to
+repeat.  The injected name <code>something</code> cannot be used because the
+definition of its class is not avaible before <code>monstrous</code> is
+defined.</p>
+
+<h4>Variable types</h4>
+
+<p>e.g.:</p>
+
+<pre>
+// elsewhere:
+template&lt;typename Alloc&gt; using particular_t = typename particular&lt;Alloc&gt;::type;
+
+/* ... */
+
+class A : public particular_t&lt;my_allocator&lt;double&gt;&gt; {
+    /* ... */
+};
+</pre>
+
+<p>Here again the base class cannot be referred to by <code>particular_t</code>,
+since that is not its name. Looking at the definition of
+<code>particular_t</code> it looks like <code>type</code> is its name, but that
+might not be so. <code>type</code> might actually be a
+<span class="literal">typedef</span> to another name, and in fact, the actual
+name of the class may vary depending on the template paramater.</p>
+
+<h4>Multiple inheritence with the same base class name</h4>
+
+<pre>
+class A : public B&lt;Hit,Me&gt;::type, public C&lt;I,Dare,Ya&gt;::type {
+    /* ... */
+};
+</pre>
+
+<p>Here the name <code>type</code> is ambiguous.</p>
+
+<h3>Alternatives</h3>
+
+<p>The first example can be solved like so:</p>
+<pre>
+template&lt;typename T,typename Pasta&gt; class monstrous : public something&lt;/* ... */&gt; {
+    typedef typename monstrous::something;
+    /* ... */
+};
+</pre>
+<p>This, however, will not solve the problem in the other two examples.</p>
+
+<p>A particular template instantiation may be declared in a typedef before being
+used in a derived class. Disadvantages: this pollutes the namespace with extra
+names, and doesn't work in the first case. In the first case, one could forward
+declare <code>monstrous</code> and delcare a template alias with the same
+parameters, but this would only exchange duplicating the base class' arguments
+with duplicating the parameters of the derived class.</p>
+
+<p>An extra template parameter can be added to the derived class to be used in
+place of the base class, with a default value of the base class that is desired.
+e.g.:</p>
+<pre>template&lt;typename T,typename B=some_base&lt;/*...*/&gt;&gt; class some_class : public B {
+    /* ... */
+};</pre>
+<p>Disadvantages: This solution is not obvious, doesn't work for the first case
+(the names <code>B</code> and <code>some_class</code> are not available at that
+point) and would require turning a plain class into a template if it wasn't one
+already.</p>
+
+<p>Work is underway to develop a reflection standard for C++, so in the future,
+given a class <code>A</code>, one will probably be able to refer to&mdash;for
+example&mdash; the first direct base class with something like
+<code>std::base_t&lt;A,0&gt;</code>. This however lacks the informativeness of a
+meaningful name and is brittle, since adding, removing or reordering base
+classes would change the numbering.</p>
+
+<h2 id="impact">IV. Impact On the Standard</h2>
+
+<p>The proposed syntax is currently ill-formed and thus will not affect existing
+code.</p>
+
+<h2 id="design">V. Design Decisions</h2>
+
+<p>The format is chosen for its similarity to the existing
+alias-declaration.</p>
+
+<h2 id="specification">VI. Technical Specifications</h2>
+
+<p>The following changes to the grammar are required:</p>
+
+<h4>A.9 Derived classes <span class="gramsection">[gram.derived]</span></h4>
+
+<div class="grammar">
+<div class="definition">base-specifier:</div>
+<div class="rule">attribute-specifier-seq<sub>opt</sub> <del>base-type-specifier</del> <ins>base-alias</ins></div>
+<div class="rule">attribute-specifier-seq<sub>opt</sub> <span class="literal">virtual</span> access-specifier<sub>opt</sub> <del>base-type-specifier</del> <ins>base-alias</ins></div>
+<div class="rule">attribute-specifier-seq<sub>opt</sub> access-specifier <span class="literal">virtual</span><sub>opt</sub> <del>base-type-specifier</del> <ins>base-alias</ins></div>
+
+<div class="definition"><ins>base-alias:</ins></div>
+<div class="rule"><ins>base-type-specifier</ins></div>
+<div class="rule"><ins>identifier <span class="literal">=</span> base-type-specifier</ins></div>
+
+<div class="definition">base-type-specifier:</div>
+<div class="rule">class-or-decltype</div>
+</div>
+
+<p>A <span class="syntax">typedef-name</span> can be introduced with a
+<span class="syntax">base-alias</span> if the
+<span class="syntax">base-type-specifier</span> is preceded by an
+<span class="syntax">identifier</span> and an equals sign. The semantics are the 
+same as if the name was defined with a <span class="literal">typedef</span>
+except it is introduced into the scope of the class being defined.</p>
+
+<!-- <h2 id="acknowledge">VII. Acknowledgements</h2> -->
+
+<h2 id="references">VII. References</h2>
+
+<p>The standards and terms are taken from the working draft
+<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3797.pdf">N3797</a>.<br>
+<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3797.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3797.pdf</a></p>
+
+</body>
+</html>
