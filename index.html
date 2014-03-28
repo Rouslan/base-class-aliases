@@ -43,7 +43,11 @@ base classes within the scope of class.</p>
 
 <p>e.g.:</p>
 
-<pre>class A : public <strong>B = C</strong>, public D {
+<pre>class C {
+    /* ... */
+};
+
+class A : public <strong>B = C</strong> {
     A() : B(3) {}
 
     void do_something() {
@@ -54,9 +58,13 @@ base classes within the scope of class.</p>
 
 <p>which would be approximately equivalent to:</p>
 
-<pre>class A : public C, public D {
+<pre>class C {
+    /* ... */
+public:
     <strong>typedef C B;</strong>
+};
 
+class A : public C {
     A() : B(3) {}
 
     void do_something() {
@@ -64,10 +72,6 @@ base classes within the scope of class.</p>
         B::do_something();
     }
 };</pre>
-
-<p>The only difference is that in the proposed syntax, the name <code>B</code>
-is specified sooner and thus could be used in the second
-<span class="syntax">base-specifier</span>.
 
 <h2 id="motivation">III. Motivation</h2>
 
@@ -165,6 +169,32 @@ example&mdash; the first direct base class with something like
 meaningful name and is brittle, since adding, removing or reordering base
 classes would change the numbering.</p>
 
+<p>The proposed syntax would allow resolving the issues in the examples like
+so:</p>
+
+<pre>
+// example 1
+template&lt;typename T,typename Pasta&gt; class monstrous :
+    public base_t = something&lt;
+        monstrous&lt;T,Pasta&gt;,
+        allocator&lt;monstrous&lt;T,Pasta&gt;&gt;,
+        comparison&lt;monstrous&lt;T,Pasta&gt;,
+        and_so_on&lt;Pasta&gt;,
+        and_so_forth&lt;T,etc&lt;T&gt;&gt;&gt; {
+    /* ... */
+};
+
+// example 2
+class A : public particular = particular_t&lt;my_allocator&lt;double&gt;&gt; {
+    /* ... */
+};
+
+// example 3
+class A : public Bx = B&lt;X&gt;, public By = B&lt;Y&gt; {
+    /* ... */
+};
+</pre>
+
 <h2 id="impact">IV. Impact On the Standard</h2>
 
 <p>The proposed syntax is currently ill-formed and thus will not affect existing
@@ -173,7 +203,7 @@ code.</p>
 <h2 id="design">V. Design Decisions</h2>
 
 <p>The format is chosen for its similarity to the existing
-alias-declaration.</p>
+<span class="syntax">alias-declaration</span>.</p>
 
 <h2 id="specification">VI. Technical Specifications</h2>
 
@@ -199,8 +229,11 @@ alias-declaration.</p>
 <span class="syntax">base-alias</span> if the
 <span class="syntax">base-type-specifier</span> is preceded by an
 <span class="syntax">identifier</span> and an equals sign. The semantics are the 
-same as if the name was defined with a <span class="literal">typedef</span>
-except it is introduced into the scope of the class being defined.</p>
+same as if the name was defined with a <span class="literal">typedef</span> in
+the base class, except it is only introduced into the scope of the class being
+defined and is only available after the <span class="syntax">base-alias</span>
+is declared. The aliased name, therefore, has the same accessibility as the
+inherited base class name.</p>
 
 <!-- <h2 id="acknowledge">VII. Acknowledgements</h2> -->
 
