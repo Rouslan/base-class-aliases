@@ -43,11 +43,8 @@ base classes within the scope of class.</p>
 
 <p>e.g.:</p>
 
-<pre>class C {
-    /* ... */
-};
-
-class A : public <strong>B = C</strong> {
+<pre>class A : protected <strong>B = C</strong>, public D {
+public:
     A() : B(3) {}
 
     void do_something() {
@@ -58,13 +55,11 @@ class A : public <strong>B = C</strong> {
 
 <p>which would be approximately equivalent to:</p>
 
-<pre>class C {
-    /* ... */
-public:
-    <strong>typedef C B;</strong>
-};
+<pre>class A : protected C, public D {
+<strong>protected:
+    typedef C B;</strong>
 
-class A : public C {
+public:
     A() : B(3) {}
 
     void do_something() {
@@ -72,6 +67,11 @@ class A : public C {
         B::do_something();
     }
 };</pre>
+
+<p>The difference being that in the proposed syntax, the name <code>B</code>
+is specified sooner and thus could be used in the second
+<span class="syntax">base-specifier</span>. The name <code>B</code> would always
+have the same accessibility as the name <code>C</code>.</p>
 
 <h2 id="motivation">III. Motivation</h2>
 
@@ -169,6 +169,8 @@ example&mdash; the first direct base class with something like
 meaningful name and is brittle, since adding, removing or reordering base
 classes would change the numbering.</p>
 
+<h3>With the new syntax</h3>
+
 <p>The proposed syntax would allow resolving the issues in the examples like
 so:</p>
 
@@ -230,9 +232,9 @@ code.</p>
 <span class="syntax">base-type-specifier</span> is preceded by an
 <span class="syntax">identifier</span> and an equals sign. The semantics are the 
 same as if the name was defined with a <span class="literal">typedef</span> in
-the base class, except it is only introduced into the scope of the class being
-defined and is only available after the <span class="syntax">base-alias</span>
-is declared. The aliased name, therefore, has the same accessibility as the
+the base class, except it is only introduced into the scope of the derived class
+and is only available after the <span class="syntax">base-alias</span> is
+declared. The aliased name, therefore, has the same accessibility as the
 inherited base class name.</p>
 
 <!-- <h2 id="acknowledge">VII. Acknowledgements</h2> -->
